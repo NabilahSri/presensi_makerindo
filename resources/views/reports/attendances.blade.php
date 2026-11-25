@@ -1,0 +1,375 @@
+@extends('layouts.app')
+
+@section('title', 'Laporan Presensi - Presensi Makerindo')
+@section('page_title', 'Laporan Rekapitulasi Presensi')
+@section('page_subtitle', 'Analisis komprehensif kehadiran kantor (GPS & Foto), WFA, Tugas Luar, keterlambatan, dan jam lembur personil.')
+
+@section('content')
+    <div class="w-full space-y-6">
+
+        <!-- 5 KPI Summary Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 print:grid-cols-6">
+            <!-- Total Log -->
+            <div class="bg-white/95 p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Log</span>
+                <div class="text-2xl font-extrabold text-slate-900 font-mono mt-2">{{ $stats['total'] }}</div>
+                <span class="text-[10px] text-slate-500 mt-1">Presensi tercatat</span>
+            </div>
+
+            <!-- Hadir di Kantor -->
+            <div class="bg-white/95 p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Hadir di Kantor</span>
+                <div class="text-2xl font-extrabold text-emerald-600 font-mono mt-2">{{ $stats['on_site'] }}</div>
+                <span class="text-[10px] text-slate-500 mt-1">GPS &amp; Foto radius kantor</span>
+            </div>
+
+            <!-- WFA -->
+            <div class="bg-white/95 p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-sky-600">WFA (Jarak Jauh)</span>
+                <div class="text-2xl font-extrabold text-sky-600 font-mono mt-2">{{ $stats['wfa'] }}</div>
+                <span class="text-[10px] text-slate-500 mt-1">Presensi mandiri</span>
+            </div>
+
+            <!-- Sakit & Izin -->
+            <div class="bg-white/95 p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-600">Sakit / Izin</span>
+                <div class="text-2xl font-extrabold text-indigo-600 font-mono mt-2">{{ $stats['sakit_izin'] }}</div>
+                <span class="text-[10px] text-slate-500 mt-1">Disetujui atasan</span>
+            </div>
+
+            <!-- Terlambat -->
+            <div class="bg-white/95 p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-rose-600">Terlambat</span>
+                <div class="text-2xl font-extrabold text-rose-600 font-mono mt-2">{{ $stats['late'] }}</div>
+                <span class="text-[10px] text-slate-500 mt-1">Masuk lewat batas waktu</span>
+            </div>
+
+            <!-- Jam Lembur -->
+            <div class="bg-white/95 p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-amber-600">Total Lembur</span>
+                <div class="text-2xl font-extrabold text-amber-600 font-mono mt-2">{{ $stats['total_overtime'] }}<span
+                        class="text-xs font-normal text-slate-500"> jam</span></div>
+                <span class="text-[10px] text-slate-500 mt-1">Akumulasi lembur</span>
+            </div>
+        </div>
+
+        <!-- Kartu Filter Rekapitulasi Presensi -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs w-full print:hidden">
+            <div class="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-100">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900">Parameter Filter Rekapitulasi Presensi</h3>
+                        <p class="text-xs text-slate-600">Pilih rentang tanggal, personil, status kehadiran, atau ketepatan waktu untuk menyaring laporan.</p>
+                    </div>
+                </div>
+                @if (request()->hasAny(['start_date', 'end_date', 'user_id', 'status', 'is_late']))
+                    <a href="{{ route('reports.attendances') }}"
+                        class="text-xs text-sky-700 hover:text-sky-900 font-bold underline transition">
+                        Atur Ulang Filter
+                    </a>
+                @endif
+            </div>
+
+            <form method="GET" action="{{ route('reports.attendances') }}" class="w-full">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5 items-end">
+                    <!-- Dari Tanggal -->
+                    <div>
+                        <label for="rep_att_start_date" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Dari Tanggal
+                        </label>
+                        <input type="date" id="rep_att_start_date" name="start_date" value="{{ $startDate }}"
+                            class="w-full h-[42px] px-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-xs font-mono font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-600 focus:border-sky-600 transition">
+                    </div>
+
+                    <!-- Sampai Tanggal -->
+                    <div>
+                        <label for="rep_att_end_date" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Sampai Tanggal
+                        </label>
+                        <input type="date" id="rep_att_end_date" name="end_date" value="{{ $endDate }}"
+                            class="w-full h-[42px] px-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-xs font-mono font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-600 focus:border-sky-600 transition">
+                    </div>
+
+                    <!-- Filter Personil -->
+                    <div>
+                        <label for="rep_att_user_id" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Personil Karyawan
+                        </label>
+                        <select id="rep_att_user_id" name="user_id"
+                            class="w-full h-[42px] px-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-600 focus:border-sky-600 transition">
+                            <option value="">Semua Personil</option>
+                            @foreach ($users as $u)
+                                <option value="{{ $u->id }}" {{ $userId == $u->id ? 'selected' : '' }}>
+                                    {{ $u->name }} ({{ $u->employment_type === 'INTERN' ? 'MAGANG' : $u->employment_type }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Status Kehadiran -->
+                    <div>
+                        <label for="rep_att_status" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Status Kehadiran
+                        </label>
+                        <select id="rep_att_status" name="status"
+                            class="w-full h-[42px] px-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-600 focus:border-sky-600 transition">
+                            <option value="">Semua Status</option>
+                            <option value="HADIR_ON_SITE" {{ $status === 'HADIR_ON_SITE' ? 'selected' : '' }}>Hadir di Kantor</option>
+                            <option value="WFA" {{ $status === 'WFA' ? 'selected' : '' }}>WFA (Jarak Jauh)</option>
+                            <option value="TUGAS_LUAR" {{ $status === 'TUGAS_LUAR' ? 'selected' : '' }}>Tugas Luar</option>
+                            <option value="CUTI" {{ $status === 'CUTI' ? 'selected' : '' }}>Cuti</option>
+                            <option value="SAKIT" {{ $status === 'SAKIT' ? 'selected' : '' }}>Sakit</option>
+                            <option value="IZIN" {{ $status === 'IZIN' ? 'selected' : '' }}>Izin</option>
+                            <option value="ALPHA" {{ $status === 'ALPHA' ? 'selected' : '' }}>Alpa / Tanpa Keterangan</option>
+                        </select>
+                    </div>
+
+                    <!-- Keterlambatan -->
+                    <div>
+                        <label for="rep_att_is_late" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Ketepatan Waktu
+                        </label>
+                        <select id="rep_att_is_late" name="is_late"
+                            class="w-full h-[42px] px-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-600 focus:border-sky-600 transition">
+                            <option value="">Semua Ketepatan</option>
+                            <option value="0" {{ $isLate === '0' ? 'selected' : '' }}>Tepat Waktu</option>
+                            <option value="1" {{ $isLate === '1' ? 'selected' : '' }}>Terlambat</option>
+                        </select>
+                    </div>
+
+                    <!-- Tombol Terapkan -->
+                    <div>
+                        <button type="submit"
+                            class="w-full h-[42px] px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer focus-visible:outline-2 focus-visible:outline-sky-600">
+                            Terapkan Filter
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Attendance Table Card -->
+        <div class="bg-white/95 rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden backdrop-blur-xs w-full">
+            <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-base font-bold text-slate-900 tracking-tight">Rincian Log Presensi Karyawan</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Periode: <strong
+                            class="text-slate-700">{{ \Carbon\Carbon::parse($startDate)->translatedFormat('d M Y') }}</strong>
+                        s/d <strong
+                            class="text-slate-700">{{ \Carbon\Carbon::parse($endDate)->translatedFormat('d M Y') }}</strong>
+                    </p>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <a href="{{ route('reports.attendances.export', request()->query()) }}"
+                        class="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white rounded-xl text-xs font-semibold shadow-2xs hover:shadow transition-all cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>Ekspor ke Excel</span>
+                    </a>
+                    <span
+                        class="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+                        {{ $attendances->total() }} Data
+                    </span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-slate-600">
+                    <thead
+                        class="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                        <tr>
+                            <th class="px-6 py-4">Karyawan & Status</th>
+                            <th class="px-6 py-4">Tanggal Presensi</th>
+                            <th class="px-6 py-4">Jam Masuk</th>
+                            <th class="px-6 py-4">Jam Pulang</th>
+                            <th class="px-6 py-4">Foto Presensi</th>
+                            <th class="px-6 py-4">Status & Metode</th>
+                            <th class="px-6 py-4 text-center">Ketepatan</th>
+                            <th class="px-6 py-4 text-right">Lembur</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @forelse($attendances as $att)
+                            <tr class="hover:bg-slate-50/60 transition">
+                                <!-- Karyawan -->
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        @include('partials.user-avatar', ['user' => $att->user, 'size' => 36, 'shape' => 'rounded-full', 'dark' => true])
+                                        <div class="min-w-0">
+                                            <div class="font-bold text-slate-900 text-xs">{{ $att->user->name ?? 'Pengguna Terhapus' }}</div>
+                                            <div class="text-[11px] text-slate-400 font-mono flex items-center gap-2 mt-0.5">
+                                                <span>{{ $att->user->email ?? '-' }}</span>
+                                                @if (isset($att->user->employment_type))
+                                                    <span
+                                                        class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                                                        {{ $att->user->employment_type === 'INTERN' ? 'MAGANG' : $att->user->employment_type }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Tanggal -->
+                                <td class="px-6 py-4 font-mono text-xs text-slate-700">
+                                    <div>{{ $att->date->translatedFormat('d M Y') }}</div>
+                                    <div class="text-[11px] text-slate-400">{{ $att->date->translatedFormat('l') }}</div>
+                                </td>
+
+                                <!-- Jam Masuk -->
+                                <td class="px-6 py-4 font-mono text-xs">
+                                    @if ($att->time_in)
+                                        <span class="font-bold text-slate-900">{{ substr($att->time_in, 0, 5) }}</span>
+                                    @else
+                                        <span class="text-slate-300">-</span>
+                                    @endif
+                                </td>
+
+                                <!-- Jam Pulang -->
+                                <td class="px-6 py-4 font-mono text-xs">
+                                    @if ($att->time_out)
+                                        <span class="font-bold text-slate-900">{{ substr($att->time_out, 0, 5) }}</span>
+                                    @else
+                                        <span class="text-slate-300">-</span>
+                                    @endif
+                                </td>
+
+                                <!-- Foto Presensi (Masuk & Pulang, klik untuk zoom) -->
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @if ($att->face_image_url || $att->checkout_face_image_url)
+                                        @php
+                                            $photoDateLabel = \Carbon\Carbon::parse($att->date)->translatedFormat('d M Y');
+                                            $empName = $att->user->name ?? 'Karyawan';
+                                        @endphp
+                                        <div class="flex flex-col gap-1.5">
+                                            @if ($att->face_image_url)
+                                                <button type="button"
+                                                    onclick='openAttendancePhotoModal(@json($att->face_image_url), @json($empName . " - Foto Masuk"), @json($photoDateLabel . ($att->time_in ? " • " . substr($att->time_in, 0, 5) . " WIB" : "")))'
+                                                    class="inline-flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl bg-emerald-50/70 hover:bg-emerald-100/80 border border-emerald-200 text-[11px] font-bold text-emerald-800 transition cursor-pointer w-fit"
+                                                    title="Klik untuk memperbesar foto masuk">
+                                                    <img src="{{ $att->face_image_url }}" alt="Foto Masuk"
+                                                        style="width: 26px; height: 26px; object-fit: cover;"
+                                                        class="rounded-lg border border-emerald-200 shrink-0" loading="lazy">
+                                                    <span>Masuk</span>
+                                                </button>
+                                            @endif
+                                            @if ($att->checkout_face_image_url)
+                                                <button type="button"
+                                                    onclick='openAttendancePhotoModal(@json($att->checkout_face_image_url), @json($empName . " - Foto Pulang"), @json($photoDateLabel . ($att->time_out ? " • " . substr($att->time_out, 0, 5) . " WIB" : "")))'
+                                                    class="inline-flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl bg-sky-50/70 hover:bg-sky-100/80 border border-sky-200 text-[11px] font-bold text-sky-800 transition cursor-pointer w-fit"
+                                                    title="Klik untuk memperbesar foto pulang">
+                                                    <img src="{{ $att->checkout_face_image_url }}" alt="Foto Pulang"
+                                                        style="width: 26px; height: 26px; object-fit: cover;"
+                                                        class="rounded-lg border border-sky-200 shrink-0" loading="lazy">
+                                                    <span>Pulang</span>
+                                                </button>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <span class="text-xs text-slate-300 font-mono">-</span>
+                                    @endif
+                                </td>
+
+                                <!-- Status & Metode -->
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        @if ($att->status === 'HADIR_ON_SITE')
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                Hadir Kantor
+                                            </span>
+                                        @elseif($att->status === 'WFA')
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
+                                                WFA (Jarak Jauh)
+                                            </span>
+                                        @elseif($att->status === 'TUGAS_LUAR')
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                                Tugas Luar
+                                            </span>
+                                        @elseif($att->status === 'CUTI')
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200">
+                                                Cuti
+                                            </span>
+                                        @elseif($att->status === 'SAKIT')
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                                Sakit
+                                            </span>
+                                        @elseif($att->status === 'IZIN')
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                                Izin
+                                            </span>
+                                        @else
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                                Alpa
+                                            </span>
+                                        @endif
+
+                                        @if ($att->method)
+                                            <span
+                                                class="text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                                {{ $att->method === 'FACIAL_LOCATION' ? 'GPS & Foto' : ($att->method === 'FORM' ? 'Formulir' : $att->method) }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                </td>
+
+                                <!-- Ketepatan Waktu -->
+                                <td class="px-6 py-4 text-center">
+                                    @if ($att->is_late)
+                                        <span
+                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                            Terlambat
+                                        </span>
+                                    @else
+                                        <span
+                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                            Tepat Waktu
+                                        </span>
+                                    @endif
+                                </td>
+
+                                <!-- Jam Lembur -->
+                                <td class="px-6 py-4 text-right font-mono text-xs">
+                                    @if ($att->overtime_hours > 0)
+                                        <span
+                                            class="font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                                            +{{ $att->overtime_hours }} Jam
+                                        </span>
+                                    @else
+                                        <span class="text-slate-300">0 Jam</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="px-6 py-12 text-center text-slate-400 text-xs">
+                                    Tidak ada catatan presensi yang cocok dengan kriteria filter yang dipilih.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            @include('partials.pagination', ['paginator' => $attendances])
+        </div>
+
+    </div>
+@endsection
